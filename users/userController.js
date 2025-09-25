@@ -56,6 +56,9 @@ const loginUser = async (loginData) => {
     }
 }
 
+const updatePassword = () => {
+  
+}
 
 module.exports = {
     createUser,
