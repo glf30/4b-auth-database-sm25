@@ -56,11 +56,48 @@ const loginUser = async (loginData) => {
     }
 }
 
-const updatePassword = () => {
-  
+const updatePassword = async (userData) => {
+  try {
+    // userData - { username, oldpassword, newpassword }
+    // find the user that we are trying to update
+    const user = await User.findOne({ username: userData.username })
+
+    if(!user) {
+      throw "User not found"
+    }
+
+    // verify old password is correct
+    const isCorrectPassword = await bcrypt.compare(userData.oldPassword, user.password)
+
+    if(isCorrectPassword){
+      // update the password
+      const salt = await bcrypt.genSalt()
+      const newHashedPassword = await bcrypt.hash(userData.newPassword, salt);
+
+      // update the user in the database with the new password
+      const updatedUser = {
+        username: user.username,
+        password: newHashedPassword
+      }
+
+      // updateOne({ searchProperty: search }, { $set: newData }) - let's us update based on any property, not just ID
+      await User.updateOne(
+        { username: user.username },
+        { $set: updatedUser }
+      )
+
+      return "Password successfully updated"
+    } else {
+      throw "Password Incorrect"
+    }
+
+  } catch (error) {
+    throw error
+  }
 }
 
 module.exports = {
     createUser,
-    loginUser
+    loginUser,
+    updatePassword
 }
