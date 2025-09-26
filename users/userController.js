@@ -1,5 +1,9 @@
 const User = require('./userModel')
 const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
+
+const dotenv = require('dotenv')
+dotenv.config()
 
 // Get All Users
 
@@ -34,45 +38,64 @@ const createUser = async userData => {
 
 // Login User
 
-const loginUser = async (loginData) => {
-    try {
-        
-        // find the username that we're trying to login as
-        // .find - returns data as an array
-        // .findOne - always returns a single item
-        const user = await User.findOne({ username: loginData.username})
+const loginUser = async loginData => {
+  try {
+    // find the username that we're trying to login as
+    // .find - returns data as an array
+    // .findOne - always returns a single item
+    const user = await User.findOne({ username: loginData.username })
 
-        if(!user){
-            throw "User not found"
-        }
-
-        // compare the passwords
-        const isCorrectPassword = await bcrypt.compare(loginData.password, user.password)
-
-        return isCorrectPassword;
-
-    } catch (error) {
-        throw error
+    if (!user) {
+      throw 'User not found'
     }
+
+    // compare the passwords
+    const isCorrectPassword = await bcrypt.compare(
+      loginData.password,
+      user.password
+    )
+
+    if (isCorrectPassword) {
+      // generate and return token
+      // jwt.sign({payload}, Secret_Key) - creates token and needs a signature
+      // payload, Secret_Key for the App
+      // payload - typically the user data
+      // Secret-Key - an encrypted string we setup in our .env file
+      const token = jwt.sign({user}, process.env.JWT_SECRET_KEY, {
+        expiresIn: '1h'
+      })
+      
+      return token;
+    } else {
+      throw 'Login Failed'
+    }
+
+    // return isCorrectPassword
+  } catch (error) {
+    throw error
+  }
 }
 
-const updatePassword = async (userData) => {
+const updatePassword = async userData => {
   try {
     // userData - { username, oldpassword, newpassword }
     // find the user that we are trying to update
     const user = await User.findOne({ username: userData.username })
 
-    if(!user) {
-      throw "User not found"
+    if (!user) {
+      throw 'User not found'
     }
 
     // verify old password is correct
-    const isCorrectPassword = await bcrypt.compare(userData.oldPassword, user.password)
+    const isCorrectPassword = await bcrypt.compare(
+      userData.oldPassword,
+      user.password
+    )
 
-    if(isCorrectPassword){
+    if (isCorrectPassword) {
       // update the password
       const salt = await bcrypt.genSalt()
-      const newHashedPassword = await bcrypt.hash(userData.newPassword, salt);
+      const newHashedPassword = await bcrypt.hash(userData.newPassword, salt)
 
       // update the user in the database with the new password
       const updatedUser = {
@@ -81,23 +104,19 @@ const updatePassword = async (userData) => {
       }
 
       // updateOne({ searchProperty: search }, { $set: newData }) - let's us update based on any property, not just ID
-      await User.updateOne(
-        { username: user.username },
-        { $set: updatedUser }
-      )
+      await User.updateOne({ username: user.username }, { $set: updatedUser })
 
-      return "Password successfully updated"
+      return 'Password successfully updated'
     } else {
-      throw "Password Incorrect"
+      throw 'Password Incorrect'
     }
-
   } catch (error) {
     throw error
   }
 }
 
 module.exports = {
-    createUser,
-    loginUser,
-    updatePassword
+  createUser,
+  loginUser,
+  updatePassword
 }
